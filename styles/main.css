@@ -1,4 +1,44 @@
-video,
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  position: relative;
+  min-height: 100vh;
+  min-width: 100%;
+  margin: auto;
+}
+
+#controls {
+  position: absolute;
+  bottom: 0;
+  height: 50px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2;
+}
+/* TODO add video controls and graph timeline above */
+
+/* TODO bottom behaviour*/
 canvas {
-  max-width: 100%
+  display: grid;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
+}
+
+video {
+  display: grid;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
 }
