@@ -64,7 +64,7 @@ async function validateFile() {
 
     fileReader.readAsDataURL(file);
   } else if (imgExts.includes(fileType)) {
-    // calculate as one frame
+    // TODO calculate as one frame
   } else {
     alert('This is not a video file');
     dropArea.classList.remove('active');
