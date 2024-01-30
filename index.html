@@ -1,18 +1,31 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Videostills.com</title>
   <link rel="stylesheet" href="./styles/main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
 </head>
 
 <body>
-  <div id="controls">
-    <button id="play-btn">start</button>
-    <select disabled>
-    </select>
+  <div id="drag-area">
+    <div class="icon"><i class="fas fa-cloud-upload-alt"></i></div>
+    <header id="drag-drop-header">drag & drop to upload video</header>
+    <span>- or -</span>
+    <button id="browse-btn">browse file</button>
+    <input id="file-input" type="file" hidden>
   </div>
-  <canvas id="frame"></canvas>
-  <script src="./scripts/getVideoTrack.js"></script>
+  <div id="video-frame">
+    <div id="controls">
+      <button id="play-btn">start</button>
+      <select id="frame-options" disabled></select>
+    </div>
+    <canvas id="frame"></canvas>
+  </div>
   <script src="./scripts/opencv.js" type="text/javascript"></script>
+  <script src="./scripts/uploadFile.js"></script>
+  <script src="./scripts/getVideoTrack.js"></script>
 </body>
 </html>

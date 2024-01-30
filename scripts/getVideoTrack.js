@@ -4,46 +4,66 @@ const select = document.querySelector('select');
 const canvas = document.getElementById('frame');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-button.onclick = async (evt) => {
-  // TODO create and move into vid processor on load
+const processVideoTrack = () => {
   if (window.MediaStreamTrackProcessor) {
-    let stopped = false;
-    const track = await getVideoTrack();
+    console.log('processing video...');
+    const video = document.getElementById('video');
+    const track = getVideoTrack(video);
     const processor = new MediaStreamTrackProcessor(track);
     const reader = processor.readable.getReader();
-    readChunk();
+    readChunk(reader);
 
-    function readChunk() {
-      reader.read().then(async ({ done, value }) => {
-        if (value) {
-          const bitmap = await createImageBitmap(value);
-          const index = frames.length;
-          frames.push(bitmap);
-          select.append(new Option(`Frame #${index + 1}`, index));
-          value.close();
-        }
-        if (!done && !stopped) {
-          readChunk();
-        } else {
-          select.disabled = false;
-        }
-      });
-    }
-    button.onclick = (evt) => (stopped = true);
-    button.textContent = 'stop';
+    // button.onclick = (evt) => (stopped = true);
+    // button.textContent = 'stop';
   } else {
     console.error("your browser doesn't support this API yet");
     // only chromium browsers
   }
 };
 
-select.onchange = (evt) => {
-  const frame = frames[select.value];
+function drawCanvas(frame) {
   canvas.width = frame.width;
   canvas.height = frame.height;
   ctx.drawImage(frame, 0, 0);
+}
 
-  // TODO create and move into vid processor on load
+select.onchange = (evt) => {
+  const frame = frames[select.value];
+  drawCanvas(frame);
+};
+
+function readChunk(reader) {
+  reader.read().then(async ({ done, value }) => {
+    if (value) {
+      const bitmap = await createImageBitmap(value);
+      const index = frames.length;
+      const laps = getLaplacianVar(bitmap);
+      frames.push(bitmap);
+      value.close();
+      select.append(new Option(`Frame #${index + 1} laps: ${laps}`, index));
+    }
+    if (!done) {
+      reader.read().then(readChunk(reader));
+    } else {
+      select.disabled = false;
+      // video.remove();
+      console.log('processing completed');
+    }
+  });
+}
+
+function getVideoTrack(video) {
+  // 'https://va.media.tumblr.com/tumblr_rwuc149ydj1a6n417_720.mp4';
+  // not .mov
+  // TODO create and put in mute button in controls
+  const [track] = video.captureStream().getVideoTracks();
+  // video.onended = (evt) => track.stop();
+  return track;
+}
+
+function getLaplacianVar(bitmap) {
+  drawCanvas(bitmap);
+  // https://stackoverflow.com/a/72288032
   // get laplacian variation per context
   const cvImage = cv.imread(canvas);
   const grayImage = new cv.Mat();
@@ -58,23 +78,7 @@ select.onchange = (evt) => {
   cv.meanStdDev(laplacianMat, mean, standardDeviationMat);
 
   const standardDeviation = standardDeviationMat.doubleAt(0, 0);
-  const laplacianVar = standardDeviation * standardDeviation;
-
-  console.log(`lap: ${laplacianVar}`);
-};
-
-async function getVideoTrack() {
-  const video = document.createElement('video');
-  video.crossOrigin = 'anonymous';
-  video.src = 'https://va.media.tumblr.com/tumblr_rwuc149ydj1a6n417_720.mp4';
-  // only .webm and .mp4, not .mov
-  document.body.append(video);
-  // TODO create and put in mute button in controls
-  video.muted = true;
-  await video.play();
-  const [track] = video.captureStream().getVideoTracks();
-  video.onended = (evt) => track.stop();
-  return track;
+  return standardDeviation * standardDeviation;
 }
 
 // https://stackoverflow.com/questions/32699721/javascript-extract-video-frames-reliably
