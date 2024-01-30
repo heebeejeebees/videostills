@@ -23,7 +23,7 @@ body {
 /* TODO add video controls and graph timeline above */
 
 /* TODO bottom behaviour*/
-canvas {
+#frame {
   display: grid;
   height: 100%;
   width: 100%;
