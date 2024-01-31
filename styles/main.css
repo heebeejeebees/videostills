@@ -22,8 +22,8 @@ body {
 
 #drag-area {
   border: 2px dashed #fff;
-  height: 500px;
-  width: 700px;
+  height: 80vh;
+  width: 80%;
   border-radius: 5px;
   display: flex;
   align-items: center;
@@ -41,13 +41,13 @@ body {
   color: #fff;
 }
 
-#drag-drop-header {
+#drag-area-header {
   font-size: 30px;
   font-weight: 500;
   color: #fff;
 }
 
-#drag-area span {
+#drag-area-span {
   font-size: 25px;
   font-weight: 500;
   color: #fff;

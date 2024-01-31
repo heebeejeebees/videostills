@@ -34,24 +34,28 @@ const processVideoTrack = async () => {
  */
 function readChunk(processor) {
   const reader = processor.readable.getReader();
+  let hasWarned = false;
   reader.read().then(async function processFrames({ done, value }) {
     if (value) {
       const bitmap = await createImageBitmap(value);
-      const laps = getLaplacianVar(bitmap);
+      const lapVar = getLaplacianVar(bitmap);
+      if (lapVar == 0 && !hasWarned) {
+        hasWarned = true;
+        alert('Video too big or completed, unable to process remaining frames');
+      }
       const index = frames.length;
 
       frames.push(bitmap);
-      select.append(new Option(`Frame #${index + 1} laps: ${laps}`, index));
+      select.append(new Option(`Frame #${index + 1} lapVar: ${lapVar}`, index));
       value.close();
     }
     if (!done) {
       reader.read().then(processFrames);
-      // readChunk();
     } else {
       reader.releaseLock();
       processor.readable.cancel();
       select.disabled = false;
-      console.log('processing completed');
+      console.log(`video processed: ${frames.length} frames`);
     }
   });
 }
@@ -102,16 +106,17 @@ function getLaplacianVar(bitmap) {
   drawCanvas(bitmap);
   try {
     /* opencv starts */
+    const pixelValConfig = cv.CV_16S;
     const cvImage = cv.imread(offscreenCanvas);
 
     const grayImage = new cv.Mat();
     const laplacianMat = new cv.Mat();
 
     cv.cvtColor(cvImage, grayImage, cv.COLOR_RGBA2GRAY);
-    cv.Laplacian(grayImage, laplacianMat, cv.CV_16S);
+    cv.Laplacian(grayImage, laplacianMat, pixelValConfig);
 
-    const mean = new cv.Mat(1, 4, cv.CV_16S);
-    const standardDeviationMat = new cv.Mat(1, 4, cv.CV_16S);
+    const mean = new cv.Mat(1, 4, pixelValConfig);
+    const standardDeviationMat = new cv.Mat(1, 4, pixelValConfig);
 
     cv.meanStdDev(laplacianMat, mean, standardDeviationMat);
 
@@ -119,7 +124,7 @@ function getLaplacianVar(bitmap) {
     return standardDeviation * standardDeviation;
   } catch (e) {
     if (typeof e === 'number') {
-      alert('Video too big, unable to process remaining frames');
+      return 0;
     }
   }
 }
