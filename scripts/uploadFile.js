@@ -10,10 +10,10 @@ browseBtn.onclick = () => {
   input.click();
 };
 
-input.addEventListener('change', async function () {
+input.addEventListener('change', function () {
   file = this.files[0];
   dropArea.classList.add('active');
-  await validateFile();
+  validateFile();
 });
 
 //If user Drag File Over DropArea
@@ -30,13 +30,13 @@ dropArea.addEventListener('dragleave', () => {
 });
 
 //If user drop File on DropArea
-dropArea.addEventListener('drop', async (event) => {
+dropArea.addEventListener('drop', (event) => {
   event.preventDefault();
   file = event.dataTransfer.files[0];
-  await validateFile();
+  validateFile();
 });
 
-async function validateFile() {
+function validateFile() {
   let fileType = file.type;
   // TODO limiter on video lengths
   let vidExts = ['video/mp4', 'video/ogg', 'video/webm'];
@@ -50,12 +50,11 @@ async function validateFile() {
       video.crossOrigin = 'anonymous';
       video.src = fileReader.result;
       video.type = fileType;
-      videoDiv.append(video);
       video.muted = true;
-      await video.play();
+      videoDiv.append(video);
       // TODO add progress bar:
       // https://www.codingnepalweb.com/file-upload-with-progress-bar-html-javascript/
-      processVideoTrack();
+      await processVideoTrack();
       // TODO allow user to remove/replace current file
       dropArea.remove();
       videoDiv.style.display = 'grid';

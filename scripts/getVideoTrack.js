@@ -1,62 +1,88 @@
 const frames = [];
 const button = document.getElementById('play-btn');
 const select = document.querySelector('select');
+const offscreenCanvas = new OffscreenCanvas(100, 100);
+const offscreenCtx = offscreenCanvas.getContext('2d', {
+  willReadFrequently: true,
+});
 const canvas = document.getElementById('frame');
-const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const ctx = canvas.getContext('2d', {
+  willReadFrequently: true,
+});
 
-const processVideoTrack = () => {
+/**
+ * main function to process video after upload
+ */
+const processVideoTrack = async () => {
   if (window.MediaStreamTrackProcessor) {
     console.log('processing video...');
     const video = document.getElementById('video');
-    const track = getVideoTrack(video);
+    const track = await getVideoTrack(video);
     const processor = new MediaStreamTrackProcessor(track);
-    const reader = processor.readable.getReader();
-
-    (function readChunk() {
-      reader.read().then(async ({ done, value }) => {
-        console.log(`done: ${done}, value: ${value}`);
-        if (value) {
-          const bitmap = await createImageBitmap(value);
-          const index = frames.length;
-          console.log(`bitmap: ${bitmap}, index: ${index}`);
-          const laps = getLaplacianVar(bitmap);
-
-          frames.push(bitmap);
-          select.append(new Option(`Frame #${index + 1} laps: ${laps}`, index));
-          value.close();
-        }
-        if (!done) {
-          // reader.read().then(processFrames);
-          readChunk();
-        } else {
-          select.disabled = false;
-          // video.remove();
-          console.log('processing completed');
-        }
-      });
-    })();
+    readChunk(processor);
     // button.onclick = (evt) => (stopped = true);
     // button.textContent = 'stop';
   } else {
-    console.error("your browser doesn't support this API yet");
-    // only chromium browsers
+    alert(
+      "Your browser doesn't support this API yet, try other Chromium browsers"
+    );
   }
 };
 
-function drawCanvas(frame) {
+/**
+ * reads VideoFrame recursively by frame
+ */
+function readChunk(processor) {
+  const reader = processor.readable.getReader();
+  reader.read().then(async function processFrames({ done, value }) {
+    if (value) {
+      const bitmap = await createImageBitmap(value);
+      const laps = getLaplacianVar(bitmap);
+      const index = frames.length;
+
+      frames.push(bitmap);
+      select.append(new Option(`Frame #${index + 1} laps: ${laps}`, index));
+      value.close();
+    }
+    if (!done) {
+      reader.read().then(processFrames);
+      // readChunk();
+    } else {
+      reader.releaseLock();
+      processor.readable.cancel();
+      select.disabled = false;
+      console.log('processing completed');
+    }
+  });
+}
+
+/**
+ * draw selected frame on OffscreenCanvas
+ * @param {ImageBitmap} bitmap of VideoFrame
+ */
+function drawCanvas(bitmap) {
+  offscreenCanvas.width = bitmap.width;
+  offscreenCanvas.height = bitmap.height;
+  offscreenCtx.drawImage(bitmap, 0, 0);
+}
+
+/** [TEMP] update canvas from user's frame selection */
+select.onchange = (evt) => {
+  const frame = frames[select.value];
   canvas.width = frame.width;
   canvas.height = frame.height;
   ctx.drawImage(frame, 0, 0);
-}
-
-select.onchange = (evt) => {
-  const frame = frames[select.value];
-  drawCanvas(frame);
 };
 
-function getVideoTrack(video) {
+/**
+ * get MediaStream Video Tracks from upload
+ * @param {HTMLElement} video created from user's file upload
+ * @returns array of MediaStreamTrack
+ */
+async function getVideoTrack(video) {
   // 'https://va.media.tumblr.com/tumblr_rwuc149ydj1a6n417_720.mp4';
-  // not .mov
+  // need demuxer/converter for .mov etc
+  await video.play();
   // TODO create and put in mute button in controls
   const [track] = video.captureStream().getVideoTracks();
   video.onended = () => {
@@ -66,29 +92,35 @@ function getVideoTrack(video) {
   return track;
 }
 
+/**
+ * to calculate laplacian variance per video frame
+ * https://stackoverflow.com/a/72288032
+ * @param {ImageBitmap} bitmap of VideoFrame
+ * @returns laplacian variance float, higher = clearer
+ */
 function getLaplacianVar(bitmap) {
   drawCanvas(bitmap);
-  // https://stackoverflow.com/a/72288032
   try {
-    let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const cvImage = cv.matFromImageData(imgData);
+    /* opencv starts */
+    const cvImage = cv.imread(offscreenCanvas);
 
     const grayImage = new cv.Mat();
     const laplacianMat = new cv.Mat();
 
-    cv.cvtColor(cvImage, grayImage, cv.COLOR_RGBA2GRAY, 0);
-    cv.Laplacian(grayImage, laplacianMat, cv.CV_64F);
+    cv.cvtColor(cvImage, grayImage, cv.COLOR_RGBA2GRAY);
+    cv.Laplacian(grayImage, laplacianMat, cv.CV_16S);
 
-    const mean = new cv.Mat(1, 4, cv.CV_64F);
-    const standardDeviationMat = new cv.Mat(1, 4, cv.CV_64F);
+    const mean = new cv.Mat(1, 4, cv.CV_16S);
+    const standardDeviationMat = new cv.Mat(1, 4, cv.CV_16S);
 
     cv.meanStdDev(laplacianMat, mean, standardDeviationMat);
 
     const standardDeviation = standardDeviationMat.doubleAt(0, 0);
     return standardDeviation * standardDeviation;
   } catch (e) {
-    console.log(`[ERROR]: ${e}, TYPE: ${typeof e}`);
-    // FIXME only 197/305 frames due to memory leakage
+    if (typeof e === 'number') {
+      alert('Video too big, unable to process remaining frames');
+    }
   }
 }
 
