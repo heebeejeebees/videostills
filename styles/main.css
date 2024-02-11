@@ -97,9 +97,11 @@ body {
   align-items: center;
   z-index: 2;
 }
-/* TODO add video controls and graph timeline above */
 
-/* TODO bottom behaviour*/
+#timeline {
+  flex: 1;
+}
+
 #frame {
   display: grid;
   height: 100%;

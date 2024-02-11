@@ -45,7 +45,13 @@ function readChunk(processor) {
       }
       const index = frames.length;
 
-      frames.push(bitmap);
+      frames.push({
+        index,
+        bitmap,
+        data: {
+          laplacian_variance: lapVar,
+        },
+      });
       select.append(new Option(`Frame #${index + 1} lapVar: ${lapVar}`, index));
       value.close();
     }
@@ -56,6 +62,7 @@ function readChunk(processor) {
       processor.readable.cancel();
       select.disabled = false;
       console.log(`video processed: ${frames.length} frames`);
+      drawTimeline();
     }
   });
 }
@@ -72,7 +79,7 @@ function drawCanvas(bitmap) {
 
 /** [TEMP] update canvas from user's frame selection */
 select.onchange = (evt) => {
-  const frame = frames[select.value];
+  const frame = frames[select.value].bitmap;
   canvas.width = frame.width;
   canvas.height = frame.height;
   ctx.drawImage(frame, 0, 0);
@@ -80,6 +87,7 @@ select.onchange = (evt) => {
 
 /**
  * get MediaStream Video Tracks from upload
+ * https://stackoverflow.com/a/32708998/9018350
  * @param {HTMLElement} video created from user's file upload
  * @returns array of MediaStreamTrack
  */
@@ -104,8 +112,8 @@ async function getVideoTrack(video) {
  */
 function getLaplacianVar(bitmap) {
   drawCanvas(bitmap);
+  /* opencv starts */
   try {
-    /* opencv starts */
     const pixelValConfig = cv.CV_16S;
     const cvImage = cv.imread(offscreenCanvas);
 
@@ -129,4 +137,14 @@ function getLaplacianVar(bitmap) {
   }
 }
 
-// https://stackoverflow.com/questions/32699721/javascript-extract-video-frames-reliably
+// TODO chart as timeline
+function drawTimeline(params) {
+  /* const timeline = document.getElementById('timeline');
+  new Chart(timeline, {
+    type: 'line',
+    data: {
+      labels: Array.from(frames.length),
+      datasets: [{ label, data }],
+    },
+  }); */
+}
